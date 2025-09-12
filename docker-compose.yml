@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hackaton-app
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Дополнительные сервисы (раскомментировать при необходимости)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: hackaton-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #   depends_on:
+  #     - app
+  #   restart: unless-stopped
+
+  # redis:
+  #   image: redis:alpine
+  #   container_name: hackaton-redis
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped
+
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: hackaton-postgres
+  #   environment:
+  #     - POSTGRES_DB=hackaton
+  #     - POSTGRES_USER=hackaton
+  #     - POSTGRES_PASSWORD=password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres_data:
