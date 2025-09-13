@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Визуализация полетов Ютэйр</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Заголовок -->
+        <header class="header">
+            <div class="container">
+                <h1 class="title">3D Визуализация полетов Ютэйр</h1>
+                <div class="controls">
+                    <button id="toggleRoutes" class="btn btn-primary">Показать маршруты</button>
+                    <button id="toggleCities" class="btn btn-secondary">Показать города</button>
+                    <button id="resetView" class="btn btn-outline">Сбросить вид</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Основной контент -->
+        <main class="main">
+            <div class="container">
+                <!-- 3D Canvas -->
+                <div class="globe-container">
+                    <canvas id="globeCanvas"></canvas>
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p>Загрузка 3D модели...</p>
+                    </div>
+                </div>
+
+                <!-- Информационная панель -->
+                <div class="info-panel" id="infoPanel">
+                    <div class="info-content">
+                        <h3>Информация о рейсе</h3>
+                        <div id="flightInfo">
+                            <p>Выберите маршрут для просмотра деталей</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Статистика -->
+                <div class="stats-panel">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalFlights">0</span>
+                        <span class="stat-label">Всего рейсов</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalCities">0</span>
+                        <span class="stat-label">Городов</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalRoutes">0</span>
+                        <span class="stat-label">Маршрутов</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Мобильное меню -->
+        <div class="mobile-menu" id="mobileMenu">
+            <button class="mobile-toggle" id="mobileToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="mobile-controls">
+                <button id="mobileToggleRoutes" class="btn btn-primary">Маршруты</button>
+                <button id="mobileToggleCities" class="btn btn-secondary">Города</button>
+                <button id="mobileResetView" class="btn btn-outline">Сброс</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение библиотек -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="js/globe.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
