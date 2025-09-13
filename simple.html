@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Визуализация полетов Ютэйр - Простая версия</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #0d47a1 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .globe-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #globe-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #globe-canvas:active {
+            cursor: grabbing;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 100;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        .filter-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .filter-content {
+            padding: 20px;
+        }
+
+        .filter-section {
+            margin-bottom: 25px;
+        }
+
+        .filter-section h4 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #e3f2fd;
+        }
+
+        .day-filters {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .day-checkbox:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .day-checkbox input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4fc3f7;
+            border-radius: 4px;
+            margin-right: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .day-checkbox input[type="checkbox"]:checked + .checkmark {
+            background-color: #4fc3f7;
+            border-color: #4fc3f7;
+        }
+
+        .day-checkbox input[type="checkbox"]:checked + .checkmark::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #b3e5fc;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 350px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .info-panel.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .info-content {
+            padding: 20px;
+        }
+
+        .info-content h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #4fc3f7;
+        }
+
+        .city-info {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e3f2fd;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4fc3f7;
+        }
+
+        .control-text {
+            font-size: 12px;
+            color: #b3e5fc;
+        }
+
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .success-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 255, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Панель фильтров -->
+        <div id="filter-panel" class="filter-panel">
+            <div class="filter-header">
+                <h3>Фильтры</h3>
+            </div>
+            <div class="filter-content">
+                <div class="filter-section">
+                    <h4>Дни недели</h4>
+                    <div class="day-filters">
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="1" checked>
+                            <span class="checkmark"></span>
+                            Пн
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="2" checked>
+                            <span class="checkmark"></span>
+                            Вт
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="3" checked>
+                            <span class="checkmark"></span>
+                            Ср
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="4" checked>
+                            <span class="checkmark"></span>
+                            Чт
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="5" checked>
+                            <span class="checkmark"></span>
+                            Пт
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="6" checked>
+                            <span class="checkmark"></span>
+                            Сб
+                        </label>
+                        <label class="day-checkbox">
+                            <input type="checkbox" data-day="7" checked>
+                            <span class="checkmark"></span>
+                            Вс
+                        </label>
+                    </div>
+                </div>
+                <div class="filter-section">
+                    <h4>Статистика</h4>
+                    <div id="stats" class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Городов:</span>
+                            <span id="cities-count" class="stat-value">16</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Маршрутов:</span>
+                            <span id="routes-count" class="stat-value">16</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Canvas -->
+        <div id="globe-container" class="globe-container">
+            <canvas id="globe-canvas"></canvas>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Загрузка 3D модели...</p>
+            </div>
+        </div>
+
+        <!-- Информационная панель -->
+        <div id="info-panel" class="info-panel">
+            <div class="info-content">
+                <h3 id="city-name">Выберите город</h3>
+                <div id="city-info" class="city-info">
+                    <p>Наведите курсор на город для просмотра информации о рейсах</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Управление -->
+        <div id="controls" class="controls">
+            <div class="control-item">
+                <span class="control-label">Управление:</span>
+                <span class="control-text">Перетаскивание - вращение, Колесико - масштаб</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🌍 Запуск простой версии приложения...');
+        
+        // Проверяем загрузку Three.js
+        function checkThreeJS() {
+            if (typeof THREE === 'undefined') {
+                console.log('⏳ Ожидание загрузки Three.js...');
+                setTimeout(checkThreeJS, 100);
+                return;
+            }
+            
+            console.log('✅ Three.js загружен, инициализация 3D сцены...');
+            init3DScene();
+        }
+        
+        function init3DScene() {
+            try {
+                // Создаем сцену
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000011);
+                
+                // Создаем камеру
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 0, 5);
+                
+                // Создаем рендерер
+                const canvas = document.getElementById('globe-canvas');
+                const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                
+                // Создаем глобус
+                const globeGeometry = new THREE.SphereGeometry(2, 64, 32);
+                const globeMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x3b82f6,
+                    shininess: 0
+                });
+                const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+                scene.add(globe);
+                
+                // Добавляем освещение
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                directionalLight.position.set(5, 3, 5);
+                scene.add(directionalLight);
+                
+                // Добавляем города
+                const cities = [
+                    { name: 'Сургут', lat: 61.25, lng: 73.4 },
+                    { name: 'Тюмень', lat: 57.15, lng: 65.53 },
+                    { name: 'Уфа', lat: 54.73, lng: 55.95 },
+                    { name: 'Екатеринбург', lat: 56.84, lng: 60.61 },
+                    { name: 'Москва', lat: 55.75, lng: 37.62 },
+                    { name: 'Санкт-Петербург', lat: 59.93, lng: 30.34 },
+                    { name: 'Новосибирск', lat: 55.01, lng: 82.93 },
+                    { name: 'Красноярск', lat: 56.01, lng: 92.87 },
+                    { name: 'Иркутск', lat: 52.3, lng: 104.3 },
+                    { name: 'Владивосток', lat: 43.11, lng: 131.87 },
+                    { name: 'Казань', lat: 55.83, lng: 49.07 },
+                    { name: 'Самара', lat: 53.2, lng: 50.15 },
+                    { name: 'Волгоград', lat: 48.7, lng: 44.52 },
+                    { name: 'Ростов-на-Дону', lat: 47.23, lng: 39.7 },
+                    { name: 'Краснодар', lat: 45.04, lng: 38.98 },
+                    { name: 'Сочи', lat: 43.59, lng: 39.72 }
+                ];
+                
+                cities.forEach(city => {
+                    const phi = (90 - city.lat) * (Math.PI / 180);
+                    const theta = (city.lng + 180) * (Math.PI / 180);
+                    
+                    const x = 2 * Math.sin(phi) * Math.cos(theta);
+                    const y = 2 * Math.cos(phi);
+                    const z = 2 * Math.sin(phi) * Math.sin(theta);
+                    
+                    const cityGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+                    const cityMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xff6b35,
+                        emissive: 0x220000
+                    });
+                    const cityMesh = new THREE.Mesh(cityGeometry, cityMaterial);
+                    cityMesh.position.set(x, y, z);
+                    cityMesh.userData = { name: city.name };
+                    scene.add(cityMesh);
+                });
+                
+                // Анимация
+                function animate() {
+                    requestAnimationFrame(animate);
+                    globe.rotation.y += 0.005;
+                    renderer.render(scene, camera);
+                }
+                
+                // Управление мышью
+                let isMouseDown = false;
+                let mouseX = 0;
+                let mouseY = 0;
+                
+                canvas.addEventListener('mousedown', (event) => {
+                    isMouseDown = true;
+                    mouseX = event.clientX;
+                    mouseY = event.clientY;
+                });
+                
+                canvas.addEventListener('mousemove', (event) => {
+                    if (!isMouseDown) return;
+                    
+                    const deltaX = event.clientX - mouseX;
+                    const deltaY = event.clientY - mouseY;
+                    
+                    globe.rotation.y += deltaX * 0.01;
+                    globe.rotation.x += deltaY * 0.01;
+                    
+                    mouseX = event.clientX;
+                    mouseY = event.clientY;
+                });
+                
+                canvas.addEventListener('mouseup', () => {
+                    isMouseDown = false;
+                });
+                
+                canvas.addEventListener('wheel', (event) => {
+                    event.preventDefault();
+                    const delta = event.deltaY;
+                    const scale = delta > 0 ? 1.1 : 0.9;
+                    camera.position.multiplyScalar(scale);
+                    
+                    const distance = camera.position.length();
+                    if (distance < 3) camera.position.normalize().multiplyScalar(3);
+                    if (distance > 15) camera.position.normalize().multiplyScalar(15);
+                });
+                
+                // Обработка изменения размера окна
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                // Скрываем загрузку
+                document.getElementById('loading').style.display = 'none';
+                
+                // Запускаем анимацию
+                animate();
+                
+                console.log('✅ 3D сцена инициализирована успешно');
+                
+            } catch (error) {
+                console.error('❌ Ошибка инициализации 3D сцены:', error);
+                document.getElementById('loading').innerHTML = '<div class="error-message">Ошибка загрузки 3D модели</div>';
+            }
+        }
+        
+        // Запускаем проверку Three.js
+        checkThreeJS();
+    </script>
+</body>
+</html>
