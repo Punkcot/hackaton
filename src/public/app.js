@@ -343,3 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🌍 Запуск приложения визуализации полетов...');
     new FlightVisualizationApp();
 });
+
+
+
+
